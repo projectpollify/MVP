@@ -1,5 +1,5 @@
-const DisscussionThread = () => {
-  return <div>DisscussionThreadComponent</div>;
+const DiscussionThread = () => {
+  return <div>DiscussionThreadComponent</div>;
 };
 
-export default DisscussionThread;
+export default DiscussionThread;
