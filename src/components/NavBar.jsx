@@ -1,20 +1,28 @@
 const NavBar = ({ setCurrentPage }) => {
+  const navItems = [
+    { label: 'Home', page: 'landing' },
+    { label: 'Onboarding', page: 'onboarding' },
+    { label: 'Dashboard', page: 'dashboard' },
+    { label: 'Pillars', page: 'pillar' },
+    { label: 'NeuroPollinator', page: 'neuro' },
+    { label: 'ThoughtPod', page: 'thoughtpod' },
+    { label: 'NFTs', page: 'nfts' },
+    { label: 'Create NFT', page: 'nft-creation' },
+    { label: 'Marketplace', page: 'nft-marketplace' },
+    { label: 'Staking', page: 'staking' },
+    { label: 'Polls', page: 'pollhub' },
+    { label: 'Create Poll', page: 'poll-creation' },
+    { label: 'Poll Page', page: 'pollpage' },
+    { label: 'Group Hub', page: 'grouphub' }
+  ];
+
   return (
-    <nav style={{ marginBottom: '20px' }}>
-      <button onClick={() => setCurrentPage('landing')}>Home</button>
-      <button onClick={() => setCurrentPage('onboarding')}>Onboarding</button>
-      <button onClick={() => setCurrentPage('dashboard')}>Dashboard</button>
-      <button onClick={() => setCurrentPage('pillar')}>Pillars</button>
-      <button onClick={() => setCurrentPage('neuro')}>NeuroPollinator</button>
-      <button onClick={() => setCurrentPage('thoughtpod')}>ThoughtPod</button>
-      <button onClick={() => setCurrentPage('nfts')}>NFTs</button>
-      <button onClick={() => setCurrentPage('nft-creation')}>Create NFT</button>
-      <button onClick={() => setCurrentPage('nft-marketplace')}>Marketplace</button>
-      <button onClick={() => setCurrentPage('staking')}>Staking</button>
-      <button onClick={() => setCurrentPage('pollhub')}>Polls</button>
-      <button onClick={() => setCurrentPage('poll-creation')}>Create Poll</button>
-      <button onClick={() => setCurrentPage('pollpage')}>Poll Page</button>
-      <button onClick={() => setCurrentPage('grouphub')}>Group Hub</button>
+    <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
+      {navItems.map(({ label, page }) => (
+        <button key={page} onClick={() => setCurrentPage(page)}>
+          {label}
+        </button>
+      ))}
     </nav>
   );
 };
