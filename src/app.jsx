@@ -1,45 +1,45 @@
 
-// src/App.jsx
+import { useState } from 'react';
+import NavBar from './components/NavBar';
 
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
-import Landing from "./pages/Landing";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import PillarInterface from "./pages/PillarInterface";
-import NeuroPollinator from "./pages/NeuroPollinator";
-import ThoughtPod from "./pages/ThoughtPod";
-import NFTs from "./pages/NFTs";
-import NFTMarketplace from "./pages/NFTMarketplace";
-import NFTCreation from "./pages/NFTCreation";
-import Staking from "./pages/Staking";
-import PollsHub from "./pages/PollsHub";
-import PollCreation from "./pages/PollCreation";
-import PollPage from "./pages/PollPage";
-import GroupHub from "./pages/GroupHub";
-import GroupPage from "./pages/GroupPage";
+// Import all your pages
+import Landing from './pages/Landing';
+import Onboarding from './pages/Onboarding';
+import Dashboard from './pages/Dashboard';
+import PillarInterface from './pages/PillarInterface';
+import NeuroPollinator from './pages/NeuroPollinator';
+import ThoughtPod from './pages/ThoughtPod';
+import NFTs from './pages/NFTs';
+import NFTCreation from './pages/NFTCreation';
+import NFTMarketplace from './pages/NFTMarketplace';
+import Staking from './pages/Staking';
+import PollsHub from './pages/PollsHub';
+import PollCreation from './pages/PollCreation';
+import PollPage from './pages/PollPage';
+import GroupHub from './pages/GroupHub';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('landing');
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/pillars" element={<PillarInterface />} />
-        <Route path="/neuro-pollinator" element={<NeuroPollinator />} />
-        <Route path="/thought-pod" element={<ThoughtPod />} />
-        <Route path="/nfts" element={<NFTs />} />
-        <Route path="/nft-marketplace" element={<NFTMarketplace />} />
-        <Route path="/nft-creation" element={<NFTCreation />} />
-        <Route path="/staking" element={<Staking />} />
-        <Route path="/polls" element={<PollsHub />} />
-        <Route path="/poll-creation" element={<PollCreation />} />
-        <Route path="/poll-page" element={<PollPage />} />
-        <Route path="/groups" element={<GroupHub />} />
-        <Route path="/group-page" element={<GroupPage />} />
-      </Routes>
-    </Router>
+    <div>
+      <NavBar setCurrentPage={setCurrentPage} />
+
+      {currentPage === 'landing' && <Landing />}
+      {currentPage === 'onboarding' && <Onboarding />}
+      {currentPage === 'dashboard' && <Dashboard />}
+      {currentPage === 'pillar' && <PillarInterface />}
+      {currentPage === 'neuro' && <NeuroPollinator />}
+      {currentPage === 'thoughtpod' && <ThoughtPod />}
+      {currentPage === 'nfts' && <NFTs />}
+      {currentPage === 'nft-creation' && <NFTCreation />}
+      {currentPage === 'nft-marketplace' && <NFTMarketplace />}
+      {currentPage === 'staking' && <Staking />}
+      {currentPage === 'pollhub' && <PollsHub />}
+      {currentPage === 'poll-creation' && <PollCreation />}
+      {currentPage === 'pollpage' && <PollPage />}
+      {currentPage === 'grouphub' && <GroupHub />}
+    </div>
   );
 }
 
