@@ -1,5 +1,0 @@
-const Pollhub = () => {
-  return <div>Pollhub Page</div>;
-};
-
-export default Pollhub;
