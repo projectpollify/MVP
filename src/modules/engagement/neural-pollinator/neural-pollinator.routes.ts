@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { NeuralPollinatorController } from './neural-pollinator.controller';
 import { body, param } from 'express-validator';
-import { walletAuth } from '../../auth/middleware/wallet-auth.middleware';
+import { walletAuth } from '../../auth/wallet.auth'; // Fixed import
 
 export function createNeuralPollinatorRoutes(controller: NeuralPollinatorController): Router {
   const router = Router();
