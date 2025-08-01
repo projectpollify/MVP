@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { TippingController } from './tipping.controller';
 import { body, param } from 'express-validator';
-import { walletAuth } from '../../auth/middleware/wallet-auth.middleware';
+import { walletAuth } from '../../auth/wallet.auth'; // Fixed import
 
 export function createTippingRoutes(tippingController: TippingController): Router {
   const router = Router();
