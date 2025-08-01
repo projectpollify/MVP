@@ -1,7 +1,7 @@
 {
   "name": "pollify-mvp",
   "version": "1.0.0",
-  "description": "Pollify.net MVP - Seven Pillars Discussion Platform",
+  "description": "Pollify MVP - Blockchain-powered polling platform",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
@@ -9,35 +9,55 @@
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts",
-    "test": "jest"
+    "prisma:studio": "prisma studio",
+    "db:seed": "ts-node src/database/seed.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
   },
-  "keywords": ["pollify", "discussion", "blockchain", "cardano"],
-  "author": "Pollify Team",
-  "license": "MIT",
   "dependencies": {
+    "@meshsdk/core": "^1.5.0",
+    "@meshsdk/react": "^1.5.0",
     "@prisma/client": "^5.7.0",
-    "axios": "^1.6.0",
-    "bcrypt": "^5.1.1",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1"
+    "node-cron": "^3.0.3",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/multer": "^1.4.11",
-    "@types/node": "^20.10.0",
+    "@types/node": "^20.10.5",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.2",
     "prisma": "^5.7.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.3.2"
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "pollify",
+    "blockchain",
+    "cardano",
+    "polling",
+    "governance"
+  ],
+  "author": "Pollify Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
