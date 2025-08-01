@@ -8,7 +8,7 @@ import { EventEmitter } from 'events';
 import { initializeDatabaseModule } from './modules/database';
 import { initializeAuthModule } from './modules/auth';
 import { initializeGroupsModule } from './modules/groups';
-import { initializeBlockchainModule } from './modules/blockchain';
+import { initializeBlockchainModule } from './blockchain';
 import { initializeEngagementModule } from './modules/engagement';
 
 // Load environment variables
