@@ -1,4 +1,5 @@
-// This is your Prisma schema file
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,129 +9,183 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Module 1 & 2: User Management
+// Existing models from Modules 1-3
+
 model users {
   id              String   @id @default(uuid())
   wallet_pub_key  String   @unique
   display_name    String?
-  mode            String   @default("true_self") // true_self, alias, soul
-  pillar_id       String?
+  mode            Boolean  @default(true)
+  pillar_id       Int?
+  stake_address   String?
+  primary_chain   String   @default("cardano")
+  wallet_metadata Json     @default("{}")
   created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  
+
   // Relations
-  pillar          pillars? @relation(fields: [pillar_id], references: [id])
-  posts           posts[]
-  created_groups  groups[] @relation("GroupCreator")
-  group_memberships group_memberships[]
-  post_flags      post_flags[]
+  posts              posts[]
+  group_memberships  group_memberships[]
+  blockchain_records blockchain_records[]
+
+  @@index([stake_address])
 }
 
-// Module 3: Pillars
 model pillars {
-  id            String   @id @default(uuid())
-  name          String   @unique
-  description   String?
-  color_hex     String   @default("#000000")
-  icon_name     String   @default("circle")
-  display_order Int      @default(0)
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
-  
+  id          Int      @id
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now())
+
   // Relations
-  groups        groups[]
-  users         users[]
+  groups groups[]
 }
 
-// Module 3: Groups
 model groups {
-  id               String    @id @default(uuid())
-  pillar_id        String
+  id               String   @id @default(uuid())
   name             String
   description      String?
-  member_count     Int       @default(0)
-  post_count       Int       @default(0)
-  last_activity_at DateTime?
-  created_by       String?
-  is_default       Boolean   @default(false)
-  created_at       DateTime  @default(now())
-  
+  pillar_id        Int
+  is_default       Boolean  @default(false)
+  member_count     Int      @default(0)
+  settings         Json     @default("{}")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now())
+
   // Relations
-  pillar           pillars   @relation(fields: [pillar_id], references: [id])
-  creator          users?    @relation("GroupCreator", fields: [created_by], references: [id])
-  posts            posts[]
+  pillar            pillars             @relation(fields: [pillar_id], references: [id])
+  posts             posts[]
   group_memberships group_memberships[]
+
+  @@index([pillar_id])
+  @@index([is_default])
 }
 
-// Module 3: Posts
-model posts {
-  id          String    @id @default(uuid())
-  group_id    String
-  author_id   String
-  parent_id   String?
-  content     String
-  view_count  Int       @default(0)
-  is_edited   Boolean   @default(false)
-  edited_at   DateTime?
-  is_deleted  Boolean   @default(false)
-  deleted_at  DateTime?
-  thread_depth Int      @default(0)
-  created_at  DateTime  @default(now())
-  
-  // Relations
-  group       groups    @relation(fields: [group_id], references: [id])
-  author      users     @relation(fields: [author_id], references: [id])
-  parent      posts?    @relation("PostReplies", fields: [parent_id], references: [id])
-  replies     posts[]   @relation("PostReplies")
-  post_sources post_sources[]
-  post_flags  post_flags[]
-  
-  // Indexes
-  @@index([parent_id])
-  @@index([created_at])
-  @@index([group_id, created_at])
-}
-
-// Module 3: Group Memberships
 model group_memberships {
+  id         String   @id @default(uuid())
   user_id    String
   group_id   String
-  role       String   @default("member") // member, moderator, admin
+  role       String   @default("member")
   joined_at  DateTime @default(now())
-  
+
   // Relations
-  user       users    @relation(fields: [user_id], references: [id])
-  group      groups   @relation(fields: [group_id], references: [id])
-  
-  @@id([user_id, group_id])
+  user  users  @relation(fields: [user_id], references: [id])
+  group groups @relation(fields: [group_id], references: [id])
+
+  @@unique([user_id, group_id])
+  @@index([user_id])
+  @@index([group_id])
 }
 
-// Module 3: Post Sources
-model post_sources {
+model posts {
+  id                 String    @id @default(uuid())
+  group_id           String
+  author_id          String
+  title              String
+  content            String
+  type               String    @default("discussion")
+  status             String    @default("active")
+  metadata           Json      @default("{}")
+  engagement_count   Int       @default(0)
+  comment_count      Int       @default(0)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @default(now())
+  deleted_at         DateTime?
+
+  // Relations
+  group  groups @relation(fields: [group_id], references: [id])
+  author users  @relation(fields: [author_id], references: [id])
+
+  @@index([group_id])
+  @@index([author_id])
+  @@index([status])
+  @@index([type])
+}
+
+model token_transactions {
+  id           String   @id @default(uuid())
+  from_wallet  String
+  to_wallet    String
+  amount       BigInt
+  tx_hash      String   @unique
+  chain        String   @default("cardano")
+  token_symbol String   @default("PCO")
+  token_type   String   @default("fungible")
+  token_id     String?
+  metadata_uri String?
+  metadata     Json?
+  created_at   DateTime @default(now())
+
+  @@index([chain, token_symbol])
+  @@index([from_wallet, to_wallet])
+}
+
+// New models for Module 4
+
+model supported_tokens {
   id               String   @id @default(uuid())
-  post_id          String
-  url              String
-  title            String?
+  symbol           String   @unique
+  chain            String
+  token_type       String
+  policy_id        String?
+  asset_name       String?
+  contract_address String?
+  decimals         Int      @default(0)
+  display_name     String
   description      String?
-  ai_summary       String?
-  credibility_score Decimal? @db.Decimal(3, 2)
+  is_active        Boolean  @default(true)
+  config           Json     @default("{}")
   created_at       DateTime @default(now())
-  
-  // Relations
-  post             posts    @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  updated_at       DateTime @default(now())
+
+  @@index([chain])
+  @@index([is_active])
 }
 
-// Module 3: Post Flags
-model post_flags {
-  id         String   @id @default(uuid())
-  post_id    String
-  user_id    String
-  reason     String?
-  created_at DateTime @default(now())
-  
-  // Relations
-  post       posts    @relation(fields: [post_id], references: [id])
-  user       users    @relation(fields: [user_id], references: [id])
-  
-  @@unique([post_id, user_id])
+model blockchain_records {
+  id            String    @id @default(uuid())
+  tx_hash       String    @unique
+  chain         String    @default("cardano")
+  record_type   String
+  data_hash     String
+  data          Json
+  created_by    String?
+  created_at    DateTime  @default(now())
+  confirmed_at  DateTime?
+  confirmations Int       @default(0)
+  status        String    @default("pending")
+
+  creator users? @relation(fields: [created_by], references: [id])
+
+  @@index([record_type])
+  @@index([status])
+  @@index([created_by])
+}
+
+model wallet_nonces {
+  id             String   @id @default(uuid())
+  wallet_address String
+  nonce          String
+  chain          String   @default("cardano")
+  expires_at     DateTime
+  used           Boolean  @default(false)
+  created_at     DateTime @default(now())
+
+  @@index([wallet_address])
+  @@index([expires_at])
+}
+
+model faucet_claims {
+  id             String   @id @default(uuid())
+  wallet_address String
+  token_symbol   String
+  amount         BigInt
+  tx_hash        String?
+  chain          String   @default("cardano")
+  claimed_at     DateTime @default(now())
+  ip_address     String?
+  user_agent     String?
+
+  @@unique([wallet_address, token_symbol, claimed_at])
+  @@index([wallet_address])
+  @@index([claimed_at])
 }
