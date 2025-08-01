@@ -1,5 +1,4 @@
 // src/modules/blockchain/index.ts
-
 // Export all blockchain module components
 
 // Core exports
@@ -23,3 +22,6 @@ export { tokenRegistry } from './tokens/token.registry';
 export { cardanoService } from './services/cardano.service';
 export { recordService } from './services/record.service';
 export { faucetService } from './services/faucet.service';
+
+// Module initialization
+export { initializeBlockchainModule, BlockchainModule } from './initialize';
