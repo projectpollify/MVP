@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { FlagController } from './flag.controller';
 import { body, param, query } from 'express-validator';
-import { walletAuth } from '../../auth/middleware/wallet-auth.middleware';
+import { walletAuth } from '../../auth/wallet.auth'; // Fixed import
 
 export function createFlagRoutes(flagController: FlagController): Router {
   const router = Router();
