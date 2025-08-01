@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { PollController } from './poll.controller';
 import { PollValidator } from './poll.validator';
-import { walletAuth } from '../../auth/middleware/wallet-auth.middleware'; // From Module 2
+import { walletAuth } from '../../auth/wallet.auth'; // Fixed import
 
 export function createPollRoutes(pollController: PollController): Router {
   const router = Router();
