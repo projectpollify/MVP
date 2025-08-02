@@ -1,3 +1,4 @@
+
 {
   "name": "pollify-mvp",
   "version": "1.0.0",
@@ -12,7 +13,12 @@
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node src/database/seed.ts",
     "test": "jest",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "staking:verify": "ts-node src/modules/staking/scripts/verify-setup.ts",
+    "staking:migrate": "psql $DATABASE_URL -f src/modules/staking/database/migrations/001_create_staking_tables.sql",
+    "staking:test-api": "ts-node src/modules/staking/scripts/test-api.ts",
+    "staking:test-api:interactive": "ts-node src/modules/staking/scripts/test-api.ts --interactive",
+    "test:staking": "jest --testPathPattern=staking"
   },
   "dependencies": {
     "@meshsdk/core": "^1.5.0",
