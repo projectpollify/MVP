@@ -10,6 +10,7 @@ import { initializeAuthModule } from './modules/auth';
 import { initializeGroupsModule } from './modules/groups';
 import { initializeBlockchainModule } from './blockchain';
 import { initializeEngagementModule } from './modules/engagement';
+import { StakingModule } from './modules/staking';
 
 // Load environment variables
 dotenv.config();
@@ -81,6 +82,13 @@ async function initializeApp() {
     });
     console.log('✅ Module 5 (Engagement) initialized');
 
+    // Module 6: Staking
+    console.log('Initializing Module 6: Staking...');
+    const stakingModule = new StakingModule(pool, eventEmitter, blockchainModule);
+    await stakingModule.initialize();
+    app.use('/api/v1/staking', stakingModule.getRouter());
+    console.log('✅ Module 6 (Staking) initialized');
+
     // Health check endpoint
     app.get('/health', (req, res) => {
       res.json({
@@ -90,7 +98,8 @@ async function initializeApp() {
           auth: 'active',
           groups: 'active',
           blockchain: 'active',
-          engagement: 'active'
+          engagement: 'active',
+          staking: 'active'
         },
         timestamp: new Date().toISOString()
       });
@@ -106,7 +115,8 @@ async function initializeApp() {
           'authentication',
           'groups',
           'blockchain',
-          'engagement'
+          'engagement',
+          'staking'
         ]
       });
     });
