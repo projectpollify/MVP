@@ -1,18 +1,19 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import { EventEmitter } from 'events';
 
 // Module imports
 import { initializeDatabaseModule } from './modules/database';
 import { initializeAuthModule } from './modules/auth';
+import { moderationModule } from './modules/moderation';
 import { initializeGroupsModule } from './modules/groups';
 import { initializeBlockchainModule } from './blockchain';
 import { initializeEngagementModule } from './modules/engagement';
 import { StakingModule } from './modules/staking';
 
 // Load environment variables
+import dotenv from 'dotenv';
 dotenv.config();
 
 // Create Express app
@@ -22,135 +23,105 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Create shared event emitter
-const eventEmitter = new EventEmitter();
 
 // Database connection
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  connectionString: process.env.DATABASE_URL,
 });
 
+// Global event emitter
+export const eventEmitter = new EventEmitter();
+
 // Initialize all modules
-async function initializeApp() {
+async function initializeModules() {
   try {
-    console.log('Starting Pollify.net server...');
-
     // Module 1: Database
-    const databaseModule = await initializeDatabaseModule({
-      pool,
-      eventEmitter
-    });
-    console.log('✅ Module 1 (Database) initialized');
+    await initializeDatabaseModule(pool);
+    console.log('✅ Module 1: Database initialized');
 
-    // Module 2: Authentication
-    const authModule = await initializeAuthModule({
-      app,
-      pool,
-      eventEmitter
-    });
-    console.log('✅ Module 2 (Authentication) initialized');
+    // Module 2: Auth
+    await initializeAuthModule(app, pool);
+    console.log('✅ Module 2: Authentication initialized');
 
     // Module 3: Groups
-    const groupsModule = await initializeGroupsModule({
-      app,
-      pool,
-      eventEmitter
-    });
-    console.log('✅ Module 3 (Groups) initialized');
+    await initializeGroupsModule(app, pool);
+    console.log('✅ Module 3: Groups initialized');
 
     // Module 4: Blockchain
-    const blockchainModule = await initializeBlockchainModule({
-      app,
-      pool,
-      eventEmitter
-    });
-    console.log('✅ Module 4 (Blockchain) initialized');
+    await initializeBlockchainModule(app, pool);
+    console.log('✅ Module 4: Blockchain initialized');
 
     // Module 5: Engagement
-    const engagementModule = await initializeEngagementModule({
-      app,
-      db: pool,
-      eventEmitter,
-      blockchainService: blockchainModule.getCardanoService(),
-      tokenRegistry: blockchainModule.getTokenRegistry()
-    });
-    console.log('✅ Module 5 (Engagement) initialized');
+    await initializeEngagementModule(app, pool);
+    console.log('✅ Module 5: Engagement initialized');
 
     // Module 6: Staking
-    console.log('Initializing Module 6: Staking...');
-    const stakingModule = new StakingModule(pool, eventEmitter, blockchainModule);
-    await stakingModule.initialize();
-    app.use('/api/v1/staking', stakingModule.getRouter());
-    console.log('✅ Module 6 (Staking) initialized');
+    const stakingModule = new StakingModule(pool);
+    await stakingModule.initialize(app);
+    console.log('✅ Module 6: Staking initialized');
 
-    // Health check endpoint
-    app.get('/health', (req, res) => {
-      res.json({
-        status: 'healthy',
-        modules: {
-          database: 'active',
-          auth: 'active',
-          groups: 'active',
-          blockchain: 'active',
-          engagement: 'active',
-          staking: 'active'
-        },
-        timestamp: new Date().toISOString()
-      });
+    // Module 7: Moderation
+    await moderationModule.initialize({
+      app,
+      pool,
+      basePath: '/api/v1/moderation'
     });
-
-    // Root endpoint
-    app.get('/', (req, res) => {
-      res.json({
-        name: 'Pollify.net API',
-        version: '1.0.0',
-        modules: [
-          'database',
-          'authentication',
-          'groups',
-          'blockchain',
-          'engagement',
-          'staking'
-        ]
-      });
-    });
-
-    // Error handling middleware
-    app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-      console.error('Error:', err);
-      res.status(err.status || 500).json({
-        success: false,
-        error: err.message || 'Internal server error'
-      });
-    });
-
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Pollify.net server running on port ${PORT}`);
-      console.log(`📍 Health check: http://localhost:${PORT}/health`);
-    });
-
-    // Handle shutdown gracefully
-    process.on('SIGINT', async () => {
-      console.log('\nShutting down gracefully...');
-      await pool.end();
-      process.exit(0);
-    });
+    console.log('✅ Module 7: Moderation initialized');
 
   } catch (error) {
-    console.error('Failed to initialize application:', error);
+    console.error('❌ Failed to initialize modules:', error);
     process.exit(1);
   }
 }
 
-// Start the application
-initializeApp();
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    // Basic health check
+    const dbCheck = await pool.query('SELECT NOW()');
+    
+    // Moderation stats
+    const modStats = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'active') as active_badges,
+        COUNT(*) FILTER (WHERE status = 'offered') as pending_invitations,
+        (SELECT COUNT(*) FROM content_flags WHERE resolved = false) as pending_flags
+      FROM mod_badges
+    `);
 
-// Export for testing
-export { app, pool, eventEmitter };
+    res.json({
+      status: 'healthy',
+      timestamp: new Date(),
+      database: dbCheck.rows[0].now ? 'connected' : 'disconnected',
+      moderation: {
+        healthy: true,
+        activeBadges: parseInt(modStats.rows[0].active_badges) || 0,
+        pendingInvitations: parseInt(modStats.rows[0].pending_invitations) || 0,
+        pendingFlags: parseInt(modStats.rows[0].pending_flags) || 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message
+    });
+  }
+});
+
+// Start server
+async function startServer() {
+  try {
+    await initializeModules();
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully
