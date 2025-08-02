@@ -11,9 +11,6 @@ import { StakingStatsService } from './services/stats.service';
 import { createStakingRoutes } from './routes/staking.routes';
 import { STAKING_POOLS } from './config/pools.config';
 
-// Import blockchain services from Module 4
-import { BlockchainModule } from '../blockchain';
-
 export class StakingModule implements Module {
   name = 'staking';
   version = '1.0.0';
@@ -23,16 +20,15 @@ export class StakingModule implements Module {
   private db: Pool;
   private eventEmitter: EventEmitter;
 
-  constructor(db: Pool, eventEmitter: EventEmitter, blockchainModule: BlockchainModule) {
+  constructor(db: Pool, eventEmitter: EventEmitter, blockchainModule: any) {
     this.db = db;
     this.eventEmitter = eventEmitter;
     
-    // Initialize services
+    // Initialize services - pass the blockchain module directly
     this.stakingService = new StakingService(
       db,
       eventEmitter,
-      blockchainModule.getBlockchainService(),
-      blockchainModule.getTokenService()
+      blockchainModule
     );
     
     this.statsService = new StakingStatsService(db);
