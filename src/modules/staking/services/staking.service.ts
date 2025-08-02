@@ -6,8 +6,6 @@
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import { EventEmitter } from '../../../core/events';
-import { BlockchainService } from '../../blockchain/services/blockchain.service';
-import { TokenService } from '../../blockchain/services/token.service';
 import { STAKING_POOLS, STAKING_CONSTANTS, calculateUnlockDate } from '../config/pools.config';
 import { 
   UserStake, 
@@ -27,19 +25,16 @@ import {
 export class StakingService {
   private db: Pool;
   private eventEmitter: EventEmitter;
-  private blockchainService: BlockchainService;
-  private tokenService: TokenService;
+  private blockchainModule: any; // Module 4's blockchain module
 
   constructor(
     db: Pool, 
     eventEmitter: EventEmitter,
-    blockchainService: BlockchainService,
-    tokenService: TokenService
+    blockchainModule: any
   ) {
     this.db = db;
     this.eventEmitter = eventEmitter;
-    this.blockchainService = blockchainService;
-    this.tokenService = tokenService;
+    this.blockchainModule = blockchainModule;
   }
 
   /**
@@ -79,17 +74,23 @@ export class StakingService {
         throw new Error('You already have an active stake in this pool');
       }
 
-      // 4. Check user has sufficient balance
-      const balance = await this.tokenService.getTokenBalance(request.walletAddress, 'PCO');
+      // 4. Check user has sufficient balance using Module 4's method
+      const cardanoService = this.blockchainModule.getCardanoService();
+      const balance = await cardanoService.getTokenBalance(request.walletAddress, 'PCO');
+      
       if (balance < request.amount) {
         throw new Error('Insufficient PCO balance');
       }
 
-      // 5. Transfer tokens to staking contract
-      const stakeTx = await this.tokenService.transferToStakingContract(
+      // 5. Transfer tokens to staking contract using Module 4's method
+      const stakingContractAddress = process.env.STAKING_CONTRACT_ADDRESS || 'addr1_staking_contract';
+      const tokenRegistry = this.blockchainModule.getTokenRegistry();
+      
+      const stakeTx = await tokenRegistry.transferToken(
         request.walletAddress,
+        stakingContractAddress,
         request.amount,
-        pool.lock_days
+        'PCO'
       );
 
       // 6. Create stake record
@@ -118,8 +119,8 @@ export class StakingService {
         [request.amount, request.poolId]
       );
 
-      // 8. Create blockchain record
-      await this.blockchainService.createRecord({
+      // 8. Create blockchain record using Module 4's method
+      await cardanoService.createRecord({
         type: 'stake_created',
         data: {
           stakeId,
@@ -177,7 +178,19 @@ export class StakingService {
       const now = new Date();
       const isEarlyExit = now < new Date(stake.unlock_date);
 
-      // 2. Calculate rewards
+      // 2. Get user's wallet address
+      const userResult = await client.query(
+        'SELECT wallet_pub_key FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        throw new Error('User not found');
+      }
+
+      const userWalletAddress = userResult.rows[0].wallet_pub_key;
+
+      // 3. Calculate rewards
       const rewardCalc = calculateStakeRewards(
         stake.id,
         parseFloat(stake.stake_amount),
@@ -187,27 +200,47 @@ export class StakingService {
         now
       );
 
-      // 3. Execute unstake on blockchain
+      // 4. Execute unstake on blockchain
+      const stakingContractAddress = process.env.STAKING_CONTRACT_ADDRESS || 'addr1_staking_contract';
+      const tokenRegistry = this.blockchainModule.getTokenRegistry();
+      const cardanoService = this.blockchainModule.getCardanoService();
       let unstakeTx;
       
       if (isEarlyExit) {
         // Early exit with penalty
-        unstakeTx = await this.tokenService.unstakeEarly(
-          stake.id,
-          stake.stake_amount,
-          rewardCalc.netReward,
-          rewardCalc.penaltyAmount || 0
+        // Transfer principal + net rewards back to user
+        const userTx = await tokenRegistry.transferToken(
+          stakingContractAddress,
+          userWalletAddress,
+          parseFloat(stake.stake_amount) + rewardCalc.netReward,
+          'PCO'
         );
+        
+        // Record the penalty burn if there's a penalty
+        if (rewardCalc.penaltyAmount && rewardCalc.penaltyAmount > 0) {
+          const burnAddress = process.env.STAKING_BURN_ADDRESS || 'addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx';
+          await tokenRegistry.transferToken(
+            stakingContractAddress,
+            burnAddress,
+            rewardCalc.penaltyAmount,
+            'PCO'
+          );
+        }
+        
+        unstakeTx = { txHash: userTx.txHash };
       } else {
-        // Normal unstake
-        unstakeTx = await this.tokenService.unstakeNormal(
-          stake.id,
-          stake.stake_amount,
-          rewardCalc.currentReward
+        // Normal unstake - transfer principal + full rewards
+        const userTx = await tokenRegistry.transferToken(
+          stakingContractAddress,
+          userWalletAddress,
+          parseFloat(stake.stake_amount) + rewardCalc.currentReward,
+          'PCO'
         );
+        
+        unstakeTx = { txHash: userTx.txHash };
       }
 
-      // 4. Update stake record
+      // 5. Update stake record
       const updateResult = await client.query(
         `UPDATE user_stakes 
          SET status = $1, unstake_date = NOW(), reward_amount = $2, 
@@ -223,13 +256,13 @@ export class StakingService {
         ]
       );
 
-      // 5. Update pool total staked
+      // 6. Update pool total staked
       await client.query(
         'UPDATE staking_pools SET total_staked = total_staked - $1 WHERE id = $2',
         [stake.stake_amount, stake.pool_id]
       );
 
-      // 6. Record rewards
+      // 7. Record rewards
       await client.query(
         `INSERT INTO staking_rewards 
          (stake_id, reward_amount, penalty_amount, claimed, tx_hash)
@@ -242,8 +275,8 @@ export class StakingService {
         ]
       );
 
-      // 7. Create blockchain record
-      await this.blockchainService.createRecord({
+      // 8. Create blockchain record
+      await cardanoService.createRecord({
         type: isEarlyExit ? 'stake_early_exit' : 'stake_completed',
         data: {
           stakeId: request.stakeId,
@@ -257,7 +290,7 @@ export class StakingService {
 
       await client.query('COMMIT');
 
-      // 8. Emit event
+      // 9. Emit event
       this.emitStakingEvent(
         isEarlyExit ? 'stake:early_exit' : 'stake:completed',
         {
